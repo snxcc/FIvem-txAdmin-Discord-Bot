@@ -1,0 +1,80 @@
+{
+  "groups": {
+    "admin": {
+      "name": "Administrator",
+      "description": "Full access to all TxAdmin features",
+      "permissions": [
+        "all_permissions",
+        "manage.admins",
+        "settings.view",
+        "settings.write",
+        "console.view",
+        "console.write",
+        "control.server",
+        "announcement",
+        "commands.resources",
+        "server.cfg.editor",
+        "txadmin.log.view",
+        "server.log.view",
+        "menu.vehicle",
+        "menu.clear_area",
+        "menu.viewids",
+        "players.direct_message",
+        "players.whitelist",
+        "players.warn",
+        "players.kick",
+        "players.ban",
+        "players.freeze",
+        "players.heal",
+        "players.playermode",
+        "players.spectate",
+        "players.teleport",
+        "players.troll"
+      ]
+    },
+    "moderator": {
+      "name": "Moderator",
+      "description": "Player management and basic server control",
+      "permissions": [
+        "console.view",
+        "announcement",
+        "menu.vehicle",
+        "menu.clear_area",
+        "menu.viewids",
+        "players.direct_message",
+        "players.warn",
+        "players.kick",
+        "players.ban",
+        "players.freeze",
+        "players.heal",
+        "players.playermode",
+        "players.spectate",
+        "players.teleport"
+      ]
+    },
+    "supporter": {
+      "name": "Supporter",
+      "description": "Basic player assistance and monitoring",
+      "permissions": [
+        "console.view",
+        "menu.viewids",
+        "players.direct_message",
+        "players.warn",
+        "players.freeze",
+        "players.heal",
+        "players.spectate",
+        "players.teleport"
+      ]
+    },
+    "trial": {
+      "name": "Trial Staff",
+      "description": "Limited access for new staff members",
+      "permissions": [
+        "console.view",
+        "menu.viewids",
+        "players.direct_message",
+        "players.spectate"
+      ]
+    }
+  }
+}
