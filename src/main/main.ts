@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
-import { TxAdminBot } from './core/bot';
-import { createConfig } from './utils/config';
+import { TxAdminBot } from '../discord/discord';
+import { TxAdminConfig } from '../types/types';
 
 dotenv.config();
 
@@ -11,6 +11,17 @@ if (missingVars.length > 0) {
     console.error('[ERROR] Missing required environment variables:', missingVars.join(', '));
     process.exit(1);
 }
+
+const createConfig = (): TxAdminConfig => {
+    const config: TxAdminConfig = {
+        url: process.env.TXADMIN_URL!,
+        username: process.env.TXADMIN_USERNAME!,
+        password: process.env.TXADMIN_PASSWORD!,
+        guildId: process.env.DISCORD_GUILD_ID,
+        adminRoleId: process.env.ADMIN_ROLE_ID
+    };
+    return config;
+};
 
 try {
     const config = createConfig();
@@ -34,3 +45,5 @@ try {
     console.error('[ERROR] Failed to start bot:', error);
     process.exit(1);
 }
+
+

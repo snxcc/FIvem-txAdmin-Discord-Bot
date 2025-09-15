@@ -2,11 +2,11 @@
   "name": "fivem-txadmin-bot",
   "version": "1.0.0",
   "description": "Discord bot for creating TxAdmin accounts",
-  "main": "dist/index.js",
+  "main": "dist/src/main/main.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
+    "start": "node dist/src/main/main.js",
+    "dev": "ts-node src/main/main.ts",
     "watch": "tsc -w"
   },
   "dependencies": {

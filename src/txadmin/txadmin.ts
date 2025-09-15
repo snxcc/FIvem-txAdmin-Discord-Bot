@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { AdminData, CreateAdminResult, AdminActionResult } from '../types';
-import { TIMEOUTS } from '../constants';
+import { AdminData, CreateAdminResult, AdminActionResult } from '../types/types';
+const TIMEOUTS = { CONNECTION: 5000, REQUEST: 10000 } as const;
 
 export class TxAdminAPI {
     private baseUrl: string;
@@ -66,8 +66,6 @@ export class TxAdminAPI {
         }
     }
 
-
-
     async deleteAdmin(username: string): Promise<AdminActionResult> {
         if (!this.csrfToken && !(await this.authenticate())) throw new Error('Failed to authenticate with TxAdmin');
         try {
@@ -90,8 +88,6 @@ export class TxAdminAPI {
         }
     }
 
-
-
     async editAdmin(username: string, adminData: AdminData, permissions: string[]): Promise<AdminActionResult> {
         if (!this.csrfToken && !(await this.authenticate())) throw new Error('Failed to authenticate with TxAdmin');
         try {
@@ -101,7 +97,6 @@ export class TxAdminAPI {
             params.append('citizenfxID', adminData.citizenfxID || '');
             params.append('discordID', adminData.discordID || '');
             permissions.forEach(p => params.append('permissions[]', p));
-
             const response = await axios.post(`${this.baseUrl}/adminManager/edit`, params.toString(), {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'x-txadmin-csrftoken': this.csrfToken!, 'Cookie': this.cookies?.join('; ') || '' },
                 timeout: TIMEOUTS.REQUEST
@@ -118,6 +113,6 @@ export class TxAdminAPI {
             return { success: false, error: error.response?.data?.message || error.message };
         }
     }
-
-
 }
+
+

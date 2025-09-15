@@ -15,7 +15,10 @@
     "sourceMap": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "src/discord/**/*",
+    "src/txadmin/**/*",
+    "src/types/**/*"
   ],
   "exclude": [
     "node_modules",
