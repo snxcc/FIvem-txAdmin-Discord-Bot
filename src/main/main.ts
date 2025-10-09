@@ -1,43 +1,28 @@
-import * as dotenv from 'dotenv';
+import 'dotenv/config';
 import { TxAdminBot } from '../discord/discord';
-import { TxAdminConfig } from '../types/types';
 
-dotenv.config();
-
-const requiredEnvVars = ['DISCORD_TOKEN', 'TXADMIN_USERNAME', 'TXADMIN_PASSWORD', 'TXADMIN_URL'];
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-
-if (missingVars.length > 0) {
+const missingVars = ['DISCORD_TOKEN', 'TXADMIN_USERNAME', 'TXADMIN_PASSWORD', 'TXADMIN_URL'].filter(v => !process.env[v]);
+if (missingVars.length) {
     console.error('[ERROR] Missing required environment variables:', missingVars.join(', '));
     process.exit(1);
 }
 
-const createConfig = (): TxAdminConfig => {
-    const config: TxAdminConfig = {
+try {
+    const bot = new TxAdminBot({
         url: process.env.TXADMIN_URL!,
         username: process.env.TXADMIN_USERNAME!,
         password: process.env.TXADMIN_PASSWORD!,
         guildId: process.env.DISCORD_GUILD_ID,
         adminRoleId: process.env.ADMIN_ROLE_ID
+    });
+
+    const shutdown = async (signal: string) => {
+        console.log(`\n[INFO] Received ${signal}, shutting down gracefully...`);
+        await bot.stop();
+        process.exit(0);
     };
-    return config;
-};
 
-try {
-    const config = createConfig();
-    const bot = new TxAdminBot(config);
-
-    process.on('SIGINT', async () => {
-        console.log('\n[INFO] Received SIGINT, shutting down gracefully...');
-        await bot.stop();
-        process.exit(0);
-    });
-
-    process.on('SIGTERM', async () => {
-        console.log('\n[INFO] Received SIGTERM, shutting down gracefully...');
-        await bot.stop();
-        process.exit(0);
-    });
+    ['SIGINT', 'SIGTERM'].forEach(signal => process.on(signal, () => shutdown(signal)));
 
     console.log('[INFO] Starting FiveM TxAdmin Bot...');
     bot.start(process.env.DISCORD_TOKEN!);
