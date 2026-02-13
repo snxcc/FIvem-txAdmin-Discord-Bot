@@ -1,14 +1,8 @@
 import 'dotenv/config';
-import { TxAdminBot } from '../discord/discord';
-
-const missingVars = ['DISCORD_TOKEN', 'TXADMIN_USERNAME', 'TXADMIN_PASSWORD', 'TXADMIN_URL'].filter(v => !process.env[v]);
-if (missingVars.length) {
-    console.error('[ERROR] Missing required environment variables:', missingVars.join(', '));
-    process.exit(1);
-}
+import { Bot } from '../discord/discord';
 
 try {
-    const bot = new TxAdminBot({
+    const bot = new Bot({
         url: process.env.TXADMIN_URL!,
         username: process.env.TXADMIN_USERNAME!,
         password: process.env.TXADMIN_PASSWORD!,

@@ -1,30 +1,53 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { AdminData, CreateAdminResult, AdminActionResult } from '../types/types';
+
 const TIMEOUTS = { CONNECTION: 5000, REQUEST: 10000 } as const;
+const UI_VERSION = '8.0.1';
+
+type AuthState = {
+    csrfToken: string;
+    cookies: string[];
+};
 
 export class TxAdminAPI {
-    private csrfToken: string | null = null;
-    private cookies: string[] | null = null;
+    private auth: AuthState | null = null;
 
-    constructor(private baseUrl: string, private username: string, private password: string) { }
+    constructor(
+        private readonly baseUrl: string,
+        private readonly username: string,
+        private readonly password: string
+    ) {}
 
     private async checkConnection(): Promise<boolean> {
         try {
-            return (await axios.get(this.baseUrl, { timeout: TIMEOUTS.CONNECTION })).status === 200;
-        } catch { return false; }
+            const { status } = await axios.get(this.baseUrl, { timeout: TIMEOUTS.CONNECTION });
+            return status === 200;
+        } catch {
+            return false;
+        }
     }
 
     private async authenticate(): Promise<boolean> {
-        if (!(await this.checkConnection())) throw new Error('TxAdmin is not running or not accessible');
+        if (!await this.checkConnection()) {
+            throw new Error('TxAdmin is not running or not accessible');
+        }
+
         try {
-            const response = await axios.post(`${this.baseUrl}/auth/password?uiVersion=8.0.1`,
-                { username: this.username, password: this.password }, { timeout: TIMEOUTS.REQUEST });
-            if (response.data.csrfToken) {
-                this.csrfToken = response.data.csrfToken;
-                this.cookies = response.headers['set-cookie'] || null;
-                console.log('[INFO] Successfully authenticated with TxAdmin');
+            const { data, headers } = await axios.post(
+                `${this.baseUrl}/auth/password?uiVersion=${UI_VERSION}`,
+                { username: this.username, password: this.password },
+                { timeout: TIMEOUTS.REQUEST }
+            );
+
+            if (data.csrfToken) {
+                this.auth = {
+                    csrfToken: data.csrfToken,
+                    cookies: headers['set-cookie'] || []
+                };
+                console.log('[INFO] Authenticated with TxAdmin');
                 return true;
             }
+
             return false;
         } catch (error: any) {
             console.error('[ERROR] Authentication failed:', error.response?.data || error.message);
@@ -33,77 +56,133 @@ export class TxAdminAPI {
     }
 
     private getHeaders() {
+        if (!this.auth) throw new Error('Not authenticated');
+        
         return {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'x-txadmin-csrftoken': this.csrfToken!,
-            'Cookie': this.cookies?.join('; ') || ''
+            'x-txadmin-csrftoken': this.auth.csrfToken,
+            'Cookie': this.auth.cookies.join('; ')
         };
     }
 
-    private async handleAuthRetry<T>(fn: () => Promise<T>, error: any): Promise<T> {
+    private async ensureAuth(): Promise<void> {
+        if (!this.auth && !await this.authenticate()) {
+            throw new Error('Failed to authenticate with TxAdmin');
+        }
+    }
+
+    private async retryWithAuth<T>(fn: () => Promise<T>, error: AxiosError): Promise<T> {
         if (error.response?.status === 403 || error.response?.status === 401) {
-            this.csrfToken = null;
+            this.auth = null;
             return fn();
         }
         throw error;
     }
 
-    async createAdmin(adminData: AdminData, permissions: string[]): Promise<CreateAdminResult> {
-        if (!this.csrfToken && !(await this.authenticate())) throw new Error('Failed to authenticate with TxAdmin');
-        try {
-            const params = new URLSearchParams({ name: adminData.name, citizenfxID: adminData.citizenfxID || '', discordID: adminData.discordID || '' });
-            permissions.forEach(p => params.append('permissions[]', p));
-
-            const response = await axios.post(`${this.baseUrl}/adminManager/add`, params.toString(), {
-                headers: this.getHeaders(),
-                timeout: TIMEOUTS.REQUEST
+    private buildParams(data: Record<string, string>, arrays?: Record<string, string[]>): URLSearchParams {
+        const params = new URLSearchParams(data);
+        if (arrays) {
+            Object.entries(arrays).forEach(([key, values]) => {
+                values.forEach(value => params.append(key, value));
             });
-
-            if (response.data.type === 'showPassword') return { success: true, password: response.data.password, username: adminData.name };
-            if (response.data.type === 'danger' || response.data.type === 'error') return { success: false, error: response.data.message || response.data.msg || response.data.error || 'Admin creation failed' };
-            return { success: false, error: `Unexpected response format: ${JSON.stringify(response.data)}` };
-        } catch (error: any) {
-            console.error('[ERROR] Failed to create admin:', error.response?.data || error.message);
-            return this.handleAuthRetry(() => this.createAdmin(adminData, permissions), error)
-                .catch(() => ({ success: false, error: error.response?.data?.message || error.message }));
         }
+        return params;
     }
 
-    async deleteAdmin(username: string): Promise<AdminActionResult> {
-        if (!this.csrfToken && !(await this.authenticate())) throw new Error('Failed to authenticate with TxAdmin');
+    private extractError(error: any): string {
+        return error.response?.data?.message || 
+               error.response?.data?.msg || 
+               error.response?.data?.error || 
+               error.message;
+    }
+
+    async createAdmin(adminData: AdminData, permissions: string[]): Promise<CreateAdminResult> {
+        await this.ensureAuth();
+
         try {
-            const response = await axios.post(`${this.baseUrl}/adminManager/delete`, new URLSearchParams({ name: username }).toString(), {
-                headers: this.getHeaders(),
-                timeout: TIMEOUTS.REQUEST
-            });
-            return (response.data.type === 'success' || response.status === 200)
-                ? { success: true, message: 'Admin deleted successfully' }
-                : { success: false, error: response.data.message || response.data.msg || 'Delete failed' };
+            const params = this.buildParams(
+                {
+                    name: adminData.name,
+                    citizenfxID: adminData.citizenfxID || '',
+                    discordID: adminData.discordID || ''
+                },
+                { 'permissions[]': permissions }
+            );
+
+            const { data } = await axios.post(
+                `${this.baseUrl}/adminManager/add`,
+                params.toString(),
+                { headers: this.getHeaders(), timeout: TIMEOUTS.REQUEST }
+            );
+
+            if (data.type === 'showPassword') {
+                return { success: true, password: data.password, username: adminData.name };
+            }
+
+            if (data.type === 'danger' || data.type === 'error') {
+                return { success: false, error: data.message || data.msg || data.error || 'Creation failed' };
+            }
+
+            return { success: false, error: `Unexpected response: ${JSON.stringify(data)}` };
         } catch (error: any) {
-            console.error('[ERROR] Failed to delete admin:', error.response?.data || error.message);
-            return this.handleAuthRetry(() => this.deleteAdmin(username), error)
-                .catch(() => ({ success: false, error: error.response?.data?.message || error.message }));
+            console.error('[ERROR] Create admin failed:', this.extractError(error));
+            return this.retryWithAuth(() => this.createAdmin(adminData, permissions), error)
+                .catch(() => ({ success: false, error: this.extractError(error) }));
         }
     }
 
     async editAdmin(username: string, adminData: AdminData, permissions: string[]): Promise<AdminActionResult> {
-        if (!this.csrfToken && !(await this.authenticate())) throw new Error('Failed to authenticate with TxAdmin');
+        await this.ensureAuth();
+
         try {
-            const params = new URLSearchParams({ name: username, newName: adminData.name, citizenfxID: adminData.citizenfxID || '', discordID: adminData.discordID || '' });
-            permissions.forEach(p => params.append('permissions[]', p));
-            const response = await axios.post(`${this.baseUrl}/adminManager/edit`, params.toString(), {
-                headers: this.getHeaders(),
-                timeout: TIMEOUTS.REQUEST
-            });
-            return (response.data.type === 'success' || response.status === 200)
-                ? { success: true, message: 'Admin updated successfully' }
-                : { success: false, error: response.data.message || response.data.msg || 'Edit failed' };
+            const params = this.buildParams(
+                {
+                    name: username,
+                    newName: adminData.name,
+                    citizenfxID: adminData.citizenfxID || '',
+                    discordID: adminData.discordID || ''
+                },
+                { 'permissions[]': permissions }
+            );
+
+            const { data, status } = await axios.post(
+                `${this.baseUrl}/adminManager/edit`,
+                params.toString(),
+                { headers: this.getHeaders(), timeout: TIMEOUTS.REQUEST }
+            );
+
+            return data.type === 'success' || status === 200
+                ? { success: true, message: 'Admin updated' }
+                : { success: false, error: data.message || data.msg || 'Edit failed' };
         } catch (error: any) {
-            console.error('[ERROR] Failed to edit admin:', error.response?.data || error.message);
-            return this.handleAuthRetry(() => this.editAdmin(username, adminData, permissions), error)
-                .catch(() => ({ success: false, error: error.response?.data?.message || error.message }));
+            console.error('[ERROR] Edit admin failed:', this.extractError(error));
+            return this.retryWithAuth(() => this.editAdmin(username, adminData, permissions), error)
+                .catch(() => ({ success: false, error: this.extractError(error) }));
+        }
+    }
+
+    async deleteAdmin(username: string): Promise<AdminActionResult> {
+        await this.ensureAuth();
+
+        try {
+            const params = this.buildParams({ name: username });
+
+            const { data, status } = await axios.post(
+                `${this.baseUrl}/adminManager/delete`,
+                params.toString(),
+                { headers: this.getHeaders(), timeout: TIMEOUTS.REQUEST }
+            );
+
+            return data.type === 'success' || status === 200
+                ? { success: true, message: 'Admin deleted' }
+                : { success: false, error: data.message || data.msg || 'Delete failed' };
+        } catch (error: any) {
+            console.error('[ERROR] Delete admin failed:', this.extractError(error));
+            return this.retryWithAuth(() => this.deleteAdmin(username), error)
+                .catch(() => ({ success: false, error: this.extractError(error) }));
         }
     }
 }
+
 
 
