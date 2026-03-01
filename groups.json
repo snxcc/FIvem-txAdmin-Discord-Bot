@@ -1,8 +1,8 @@
 {
   "groups": {
-    "admin": {
-      "name": "Administrator",
-      "description": "Full access to all TxAdmin features",
+    "pl": {
+      "name": "pl",
+      "description": "PL Perms",
       "permissions": [
         "all_permissions",
         "manage.admins",
@@ -32,14 +32,88 @@
         "players.troll"
       ]
     },
-    "moderator": {
-      "name": "Moderator",
-      "description": "Player management and basic server control",
+    "manager": {
+      "name": "manager",
+      "description": "Manager Perms",
       "permissions": [
+        "manage.admins",
+        "settings.view",
+        "settings.write",
         "console.view",
+        "console.write",
+        "control.server",
         "announcement",
+        "commands.resources",
+        "txadmin.log.view",
+        "server.log.view",
         "menu.vehicle",
         "menu.clear_area",
+        "menu.viewids",
+        "players.direct_message",
+        "players.whitelist",
+        "players.warn",
+        "players.kick",
+        "players.ban",
+        "players.freeze",
+        "players.heal",
+        "players.playermode",
+        "players.spectate",
+        "players.teleport"
+      ]
+    },
+    "teamleitung": {
+      "name": "teamleitung",
+      "description": "TL Perms",
+      "permissions": [
+        "manage.admins",
+        "settings.view",
+        "console.view",
+        "console.write",
+        "control.server",
+        "txadmin.log.view",
+        "server.log.view",
+        "players.direct_message",
+        "players.warn",
+        "players.kick",
+        "players.ban",
+        "players.freeze",
+        "players.heal",
+        "players.playermode",
+        "players.spectate",
+        "players.teleport"
+      ]
+    },
+    "sadmin": {
+      "name": "sadmin",
+      "description": "SAdmin Perms",
+      "permissions": [
+        "settings.view",
+        "console.view",
+        "console.write",
+        "control.server",
+        "txadmin.log.view",
+        "server.log.view",
+        "players.direct_message",
+        "players.warn",
+        "players.kick",
+        "players.ban",
+        "players.freeze",
+        "players.heal",
+        "players.playermode",
+        "players.spectate",
+        "players.teleport"
+      ]
+    },
+    "admin": {
+      "name": "admin",
+      "description": "Admin Perms",
+      "permissions": [
+        "settings.view",
+        "console.view",
+        "console.write",
+        "control.server",
+        "server.cfg.editor",
+        "server.log.view",
         "menu.viewids",
         "players.direct_message",
         "players.warn",
@@ -52,27 +126,30 @@
         "players.teleport"
       ]
     },
-    "supporter": {
-      "name": "Supporter",
-      "description": "Basic player assistance and monitoring",
+    "mod": {
+      "name": "mod",
+      "description": "Mod Perms",
       "permissions": [
+        "settings.view",
         "console.view",
         "menu.viewids",
         "players.direct_message",
         "players.warn",
+        "players.kick",
         "players.freeze",
-        "players.heal",
         "players.spectate",
         "players.teleport"
       ]
     },
-    "trial": {
-      "name": "Trial Staff",
-      "description": "Limited access for new staff members",
+    "support": {
+      "name": "support",
+      "description": "Support Perms",
       "permissions": [
-        "console.view",
+        "settings.view",
         "menu.viewids",
         "players.direct_message",
+        "players.warn",
+        "players.heal",
         "players.spectate"
       ]
     }
